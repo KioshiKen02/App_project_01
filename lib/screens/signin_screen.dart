@@ -163,7 +163,7 @@ class _SignInScreenState extends State<SignInScreen> {
                           ],
                         ),
                         SizedBox(
-                          height: 30,
+                          height: 10,
                         ),
                         //Sign In Button
                         SizedBox(
@@ -171,17 +171,16 @@ class _SignInScreenState extends State<SignInScreen> {
                           height: 50,
                           child: ElevatedButton(
                             onPressed: (){
-                              if(_formSignInKey.currentState!.validate()
-                              && rememberPassword){
+                              if(_formSignInKey.currentState!.validate()){
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Processing Data'),
+                                    content: Text('Successfully Log In'),
                                   ),
                                 );
-                              } else if (!rememberPassword){
+                              } else if (rememberPassword){
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                    content: Text('Please Agree to the Terms and Conditions'),
+                                    content: Text('Successfully Log In'),
                                   ),
                                 );
                               }
