@@ -1,44 +1,39 @@
 import 'package:flutter/material.dart';
 
-
 class WelcomeButton extends StatelessWidget {
-  final String? buttonText;
-  final Widget? onTap;
-  final Color? color;
-  final TextStyle? style;
+  final String buttonText;
+  final VoidCallback? onTap;
+  final Color color;
+  final TextStyle style;
 
   const WelcomeButton({
     super.key,
-    this.buttonText,
+    required this.buttonText,
+    required this.color,
+    required this.style,
     this.onTap,
-    this.color,
-    this.style,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-              builder: (context) => onTap!,
-          ),
-        );
-      },
+      onTap: onTap,
       child: Container(
-        padding: EdgeInsets.all(10),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: color!,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(50),
+          color: color,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(10),
+            bottomLeft: Radius.circular(10),
+            bottomRight: Radius.circular(10),
           ),
         ),
-          child: Text(
-            buttonText!,
-            textAlign: TextAlign.center,
-            style: style!,
-          )
+        child: Text(
+          buttonText,
+          textAlign: TextAlign.center,
+          style: style,
+        ),
       ),
     );
   }

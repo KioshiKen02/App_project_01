@@ -1,7 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:project_01/screens/signin_screen.dart';
 import 'package:project_01/widgets/custom_scaffold_widget.dart';
-import '../theme/theme.dart';
+import '../database/database_helper.dart';
+
 
 class ForgetPasswordScreen extends StatefulWidget {
   const ForgetPasswordScreen({
@@ -14,9 +17,58 @@ class ForgetPasswordScreen extends StatefulWidget {
 
 class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
   final _formforgetpassword = GlobalKey<FormState>();
-  bool checkinfo = false;
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController confirmPasswordController = TextEditingController();
+  final DatabaseHelper _dbHelper = DatabaseHelper();
+  bool checkinfo = false;
+
+  Future<void> _handlePasswordReset() async {
+    if (_formforgetpassword.currentState!.validate() && checkinfo) {
+      try {
+        final response = await http.post(
+          Uri.parse('http://172.16.42.112:8081/auth/reset-password'),
+          body: json.encode({
+            'username': usernameController.text,
+            'email': emailController.text.toLowerCase(),
+            'password': passwordController.text,
+          }),
+          headers: {'Content-Type': 'application/json'},
+        );
+        if (!mounted) return;
+
+        final data = json.decode(response.body);
+
+        if (response.statusCode == 200) {
+          // Update password in local SQLite
+          await _dbHelper.updateUserPassword(
+              emailController.text.toLowerCase(),
+              passwordController.text
+          );
+          if (!mounted) return;
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Password Updated Successfully')),
+          );
+
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => SignInScreen()),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(data['message'])),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password reset failed: Check connection')),
+        );
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -39,9 +91,9 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
           Expanded(
             flex: 7,
             child: Container(
-              padding: EdgeInsets.fromLTRB( 25.0, 40.0, 25.0, 20.0),
+              padding: EdgeInsets.fromLTRB(25.0, 40.0, 25.0, 20.0),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Colors.black, // Black background
                 borderRadius: BorderRadius.only(
                   topLeft: Radius.circular(40),
                   topRight: Radius.circular(40),
@@ -53,42 +105,44 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      //welcome
+                      // Title
                       Text(
                         'Forget Password',
                         style: TextStyle(
                           fontSize: 30,
                           fontWeight: FontWeight.bold,
-                          color: lightColorScheme.primary,
+                          color: Colors.white, // White text
                         ),
                       ),
                       SizedBox(
                         height: 30,
                       ),
-                      //user Name
+                      // User Name
                       TextFormField(
-                        validator: (value){
-                          if(value == null || value.isEmpty){
+                        controller: usernameController,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
                             return 'Please Enter Your User Name';
                           }
                           return null;
                         },
+                        style: TextStyle(color: Colors.white), // White text
                         decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.account_circle_rounded),
-                          label: Text('User Name'),
+                          prefixIcon: Icon(Icons.account_circle_rounded, color: Colors.white),
+                          label: Text('User Name', style: TextStyle(color: Colors.white70)),
                           hintText: 'Please Enter Your User Name',
                           hintStyle: TextStyle(
-                            color: Colors.black26,
+                            color: Colors.white54,
                           ),
                           border: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
                           enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
@@ -97,30 +151,37 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         height: 10,
                       ),
-                      //Email
+                      // Email
                       TextFormField(
-                        validator: (value){
-                          if(value == null || value.isEmpty){
+                        controller: emailController,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
                             return 'Please Enter Your Email';
+                          }
+                          // Email format validation
+                          final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+                          if (!emailRegex.hasMatch(value)) {
+                            return 'Please enter a valid email';
                           }
                           return null;
                         },
+                        style: TextStyle(color: Colors.white), // White text
                         decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.email),
-                          label: Text('Email'),
+                          prefixIcon: Icon(Icons.email, color: Colors.white),
+                          label: Text('Email', style: TextStyle(color: Colors.white70)),
                           hintText: 'Please Enter Your Email',
                           hintStyle: TextStyle(
-                            color: Colors.black26,
+                            color: Colors.white54,
                           ),
                           border: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
                           enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
@@ -129,32 +190,36 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         height: 10,
                       ),
-                      //Password
+                      // Password
                       TextFormField(
                         controller: passwordController,
-                        validator: (value){
-                          if(value == null || value.isEmpty){
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
                             return 'Please Enter Your Password';
+                          }
+                          if (value.length < 8) {
+                            return 'Password must be at least 8 characters';
                           }
                           return null;
                         },
                         obscureText: true,
+                        style: TextStyle(color: Colors.white), // White text
                         decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.lock),
-                          label: Text('Password'),
+                          prefixIcon: Icon(Icons.lock, color: Colors.white),
+                          label: Text('Password', style: TextStyle(color: Colors.white70)),
                           hintText: 'Please Enter Your Password',
                           hintStyle: TextStyle(
-                            color: Colors.black26,
+                            color: Colors.white54,
                           ),
                           border: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
                           enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
@@ -163,11 +228,11 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         height: 10,
                       ),
-                      //Confirm Password
+                      // Confirm Password
                       TextFormField(
                         controller: confirmPasswordController,
-                        validator: (value){
-                          if(value == null || value.isEmpty){
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
                             return 'Please Enter Your Password';
                           }
                           if (value != passwordController.text) {
@@ -176,22 +241,23 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                           return null;
                         },
                         obscureText: true,
+                        style: TextStyle(color: Colors.white), // White text
                         decoration: InputDecoration(
-                          prefixIcon: Icon(Icons.lock),
-                          label: Text('Confirm Your Password'),
+                          prefixIcon: Icon(Icons.lock, color: Colors.white),
+                          label: Text('Confirm Your Password', style: TextStyle(color: Colors.white70)),
                           hintText: 'Please Enter Your Password',
                           hintStyle: TextStyle(
-                            color: Colors.black26,
+                            color: Colors.white54,
                           ),
                           border: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
                           enabledBorder: OutlineInputBorder(
                               borderSide: BorderSide(
-                                  color: Colors.black26
+                                  color: Colors.white30
                               ),
                               borderRadius: BorderRadius.circular(10)
                           ),
@@ -200,25 +266,26 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         height: 10,
                       ),
-                      //Note
+                      // Note
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Row(
                             children: [
                               Checkbox(
-                                value:checkinfo,
-                                onChanged: (bool? value){
+                                value: checkinfo,
+                                onChanged: (bool? value) {
                                   setState(() {
                                     checkinfo = value!;
                                   });
                                 },
-                                activeColor: lightColorScheme.error,
+                                activeColor: Colors.white, // White checkbox
+                                checkColor: Colors.black, // Black checkmark
                               ),
                               Text(
                                 'Check If All The Information Is Correct',
                                 style: TextStyle(
-                                  color: Colors.red,
+                                  color: Colors.white70, // Light white text
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
                                 ),
@@ -230,31 +297,25 @@ class _ForgetPasswordScreenState extends State<ForgetPasswordScreen> {
                       SizedBox(
                         height: 20,
                       ),
-                      //Save New Password
+                      // Save New Password Button
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: (){
-                            if(_formforgetpassword.currentState!.validate()){
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Password Updated Successfully'),
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                              Navigator.pop( context, MaterialPageRoute(builder: (BuildContext context) {
-                                return SignInScreen();
-                              }));
-                            }
-                          },
+                          onPressed: _handlePasswordReset,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white, // White button
+                            foregroundColor: Colors.black, // Black text
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
                           child: Text('Save New Password'),
                         ),
                       ),
                       SizedBox(
                         height: 20,
                       ),
-                      //don't have account?
                     ],
                   ),
                 ),

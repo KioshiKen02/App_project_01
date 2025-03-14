@@ -2,29 +2,29 @@ import 'package:flutter/material.dart';
 
 class CustomScaffoldWidget extends StatelessWidget {
   final Widget? child;
-  const CustomScaffoldWidget({super.key , this.child});
+  const CustomScaffoldWidget({super.key, this.child});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
         centerTitle: true,
-        backgroundColor: Colors.transparent,
+        backgroundColor: Colors.black, // Changed to solid black
         elevation: 0,
       ),
-      extendBodyBehindAppBar: true,
-      body: Stack(
-        children: [
-          Image.asset('assets/images/bg.jpg',
-            fit: BoxFit.cover,
-            width: double.infinity,
-            height: double.infinity,
+      extendBodyBehindAppBar: false, // No need to extend body behind AppBar
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.black, Colors.grey], // Black & White gradient
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          SafeArea(
-              child: child!,
-          )
-        ],
+        ),
+        child: SafeArea(
+          child: child ?? const SizedBox(), // Ensure child is not null
+        ),
       ),
     );
   }
