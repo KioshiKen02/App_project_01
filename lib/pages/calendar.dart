@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:table_calendar/table_calendar.dart';
-import '../database/calendar_helper.dart';
 import 'package:provider/provider.dart';
-import '../theme/themeprovider.dart'; // Import your ThemeProvider
+import 'package:table_calendar/table_calendar.dart';
+import 'package:project_01/provider/event.dart';
+import 'package:project_01/theme/themeprovider.dart';
+import 'package:project_01/pages/add_event.dart';
 
 class CalendarPages extends StatefulWidget {
   const CalendarPages({super.key});
@@ -12,119 +13,36 @@ class CalendarPages extends StatefulWidget {
 }
 
 class _CalendarPagesState extends State<CalendarPages> {
-  CalendarFormat _calendarFormat = CalendarFormat.month;
+  late CalendarFormat _calendarFormat = CalendarFormat.month;
   DateTime _focusedDay = DateTime.now();
   DateTime? _selectedDay;
-  final Map<DateTime, List<Map<String, dynamic>>> _events = {};
 
   @override
   void initState() {
     super.initState();
     _selectedDay = DateTime(_focusedDay.year, _focusedDay.month, _focusedDay.day);
-    WidgetsBinding.instance.addPostFrameCallback((_) => _loadEvents());
-  }
-
-  Future<void> _loadEvents() async {
-    final dbHelper = DatabaseHelper1.instance;
-    final DateTime selectedDate = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-    final String formattedDate = selectedDate.toIso8601String().split("T")[0];
-    final List<Map<String, dynamic>> events = await dbHelper.getEventsByDate(formattedDate);
-
-    setState(() {
-      _events[selectedDate] = events.isNotEmpty
-          ? events.map((e) => {'id': e['id'], 'title': e['title']}).toList()
-          : [];
-    });
-  }
-
-  void _addEvent() {
-    if (_selectedDay == null) return;
-    showDialog(
-      context: context,
-      builder: (context) {
-        String eventTitle = "";
-        return AlertDialog(
-          title: Text("Add Event", style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color)),
-          content: TextField(
-            onChanged: (value) {
-              eventTitle = value;
-            },
-            decoration: InputDecoration(
-              hintText: "Enter event title",
-              border: const OutlineInputBorder(),
-              hintStyle: TextStyle(color: Theme.of(context).hintColor),
-            ),
-            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                if (eventTitle.isNotEmpty) {
-                  final dbHelper = DatabaseHelper1.instance;
-                  final DateTime selectedDate = DateTime(_selectedDay!.year, _selectedDay!.month, _selectedDay!.day);
-                  final String formattedDate = selectedDate.toIso8601String().split("T")[0];
-
-                  await dbHelper.insertEvent(formattedDate, eventTitle);
-                  await _loadEvents();
-
-                  if (!context.mounted) return;
-                  Navigator.pop(context);
-                }
-              },
-              child: Text("Save", style: TextStyle(color: Theme.of(context).colorScheme.primary)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _deleteEvent(int id) async {
-    final dbHelper = DatabaseHelper1.instance;
-    await dbHelper.deleteEvent(id);
     _loadEvents();
   }
 
-  void _editEvent(int id, String currentTitle) {
-    TextEditingController controller = TextEditingController(text: currentTitle);
-
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Edit Event", style: TextStyle(color: Theme.of(context).textTheme.titleLarge?.color)),
-          content: TextField(
-            controller: controller,
-            decoration: InputDecoration(
-              hintText: "Enter new title",
-              border: const OutlineInputBorder(),
-              hintStyle: TextStyle(color: Theme.of(context).hintColor),
-            ),
-            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () async {
-                if (controller.text.isNotEmpty) {
-                  final dbHelper = DatabaseHelper1.instance;
-                  await dbHelper.updateEvent(id, controller.text);
-                  _loadEvents();
-                }
-                if (!context.mounted) return;
-                Navigator.pop(context);
-              },
-              child: Text("Update", style: TextStyle(color: Theme.of(context).primaryColor)),
-            ),
-          ],
-        );
-      },
-    );
+  Future<void> _loadEvents() async {
+    final eventProvider = Provider.of<EventProvider>(context, listen: false);
+    await eventProvider.loadEvents();
   }
 
   @override
   Widget build(BuildContext context) {
     final themeProvider = Provider.of<ThemeProvider>(context);
     final isDarkMode = themeProvider.themeMode == ThemeMode.dark;
+    final eventProvider = Provider.of<EventProvider>(context);
+
+    // Convert events list to a map grouped by date
+    final Map<DateTime, List<Map<String, dynamic>>> eventsByDate = {};
+    for (var event in eventProvider.events) {
+      DateTime eventDate = DateTime.parse(event['date']);
+      eventDate = DateTime(eventDate.year, eventDate.month, eventDate.day); // Remove time part
+      eventsByDate[eventDate] = eventsByDate[eventDate] ?? [];
+      eventsByDate[eventDate]!.add(event);
+    }
 
     return Scaffold(
       body: SingleChildScrollView(
@@ -142,9 +60,15 @@ class _CalendarPagesState extends State<CalendarPages> {
                   _selectedDay = DateTime(selectedDay.year, selectedDay.month, selectedDay.day);
                   _focusedDay = focusedDay;
                 });
-                _loadEvents();
               },
               onFormatChanged: (format) => setState(() => _calendarFormat = format),
+
+              // 🔹 Mark days with events
+              eventLoader: (day) {
+                DateTime normalizedDay = DateTime(day.year, day.month, day.day);
+                return eventsByDate[normalizedDay] ?? [];
+              },
+
               daysOfWeekStyle: DaysOfWeekStyle(
                 weekdayStyle: TextStyle(
                   color: isDarkMode ? Colors.white : Colors.black,
@@ -164,9 +88,13 @@ class _CalendarPagesState extends State<CalendarPages> {
                   color: isDarkMode ? Colors.grey[700]! : Colors.grey[300]!,
                   shape: BoxShape.circle,
                 ),
-                weekendTextStyle: TextStyle(color: Colors.red),
+                markerDecoration: BoxDecoration(
+                  color: Colors.red, // Event marker color
+                  shape: BoxShape.circle,
+                ),
+                markersAlignment: Alignment.bottomCenter,
+                weekendTextStyle: const TextStyle(color: Colors.red),
                 defaultTextStyle: TextStyle(color: isDarkMode ? Colors.white : Colors.black),
-                holidayTextStyle: TextStyle(color: Colors.red),
               ),
               headerStyle: HeaderStyle(
                 titleCentered: true,
@@ -180,56 +108,20 @@ class _CalendarPagesState extends State<CalendarPages> {
                 rightChevronIcon: Icon(Icons.chevron_right, color: isDarkMode ? Colors.white : Colors.grey),
               ),
             ),
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                "Events on ${_selectedDay!.toLocal().toString().split(' ')[0]}",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : Colors.black,
-                ),
-              ),
-            ),
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 300,
-              child: ListView(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                children: (_events[_selectedDay] ?? []).map((event) {
-                  return Card(
-                    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    elevation: 2,
-                    color: isDarkMode ? Colors.grey[800] : Colors.white,
-                    child: ListTile(
-                      title: Text(event['title'], style: TextStyle(color: isDarkMode ? Colors.white : Colors.black)),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          IconButton(
-                            icon: Icon(Icons.edit, color: isDarkMode ? Colors.blue[200] : Colors.blue),
-                            onPressed: () => _editEvent(event['id'], event['title']),
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete, color: isDarkMode ? Colors.red[200] : Colors.red),
-                            onPressed: () => _deleteEvent(event['id']),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _addEvent,
-        backgroundColor: isDarkMode ? Colors.grey[700] : Colors.grey[300],
-        child: Icon(Icons.add, color: isDarkMode ? Colors.white : Colors.black),
+        onPressed: () {
+          // Navigate to the AddEvent page
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AddEvent(selectedDay: _selectedDay),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

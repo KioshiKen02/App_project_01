@@ -10,8 +10,8 @@ import 'package:project_01/screens/forget_password_screen.dart';
 import 'package:project_01/screens/signup_screen.dart';
 import 'package:project_01/widgets/custom_scaffold_widget.dart';
 import 'package:provider/provider.dart';
-import '../theme/themeprovider.dart';
-import '../database/database_helper.dart';
+import 'package:project_01/theme/themeprovider.dart';
+import 'package:project_01/database/database_helper.dart';
 
 class SignInScreen extends StatefulWidget {
   final bool isOfflineMode;
@@ -40,7 +40,7 @@ class _SignInScreenState extends State<SignInScreen> {
         _isLoading = true; // Start loading
       });
 
-      await Future.delayed(const Duration(seconds: 10));
+      // await Future.delayed(const Duration(seconds: 10));
 
       if (widget.isOfflineMode) {
         await _handleOfflineLogin();
@@ -289,16 +289,30 @@ class _SignInScreenState extends State<SignInScreen> {
           // Loading Overlay
           if (_isLoading)
             Container(
-              color: Colors.black.withValues(alpha: 0.5), // Semi-transparent overlay
+              color: Colors.black.withValues(alpha: 0.5),
               child: Center(
-                child: Lottie.asset(
-                  'assets/Loading.json', // Path to your Lottie file
-                  width: 80, // Adjust size as needed
-                  height: 80,
-                  fit: BoxFit.cover,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, // Ensures minimal height usage
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Lottie.asset(
+                      'assets/Loading.json', // Path to your Lottie file
+                      width: 80, // Adjust size as needed
+                      height: 80,
+                      fit: BoxFit.cover,
+                    ),
+                    const Text(
+                      'Logging In , please wait...', // Loading message
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
+            )
         ],
       ),
     );

@@ -7,7 +7,7 @@ import 'package:project_01/config/api_config.dart';
 import 'package:project_01/screens/signin_screen.dart';
 import 'package:project_01/screens/terms_and_conditions.dart';
 import 'package:project_01/widgets/custom_scaffold_widget.dart';
-import '../database/database_helper.dart';
+import 'package:project_01/database/database_helper.dart';
 
 class SignUpScreen extends StatefulWidget {
   final bool isOfflineMode;

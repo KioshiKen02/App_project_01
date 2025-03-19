@@ -1,52 +1,80 @@
+import 'package:flutter/cupertino.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path/path.dart';
 
 class DatabaseHelper1 {
-  static final DatabaseHelper1 instance = DatabaseHelper1._init();
+  static final DatabaseHelper1 _instance = DatabaseHelper1._internal();
   static Database? _database;
 
-  DatabaseHelper1._init();
+  factory DatabaseHelper1() {
+    return _instance;
+  }
+
+  DatabaseHelper1._internal();
 
   Future<Database> get database async {
     if (_database != null) return _database!;
-    _database = await _initDB('events.db');
+    _database = await _initDatabase();
     return _database!;
   }
 
-  Future<Database> _initDB(String filePath) async {
-    final dbPath = await getDatabasesPath();
-    final path = join(dbPath, filePath);
-
-    return await openDatabase(path, version: 1, onCreate: _createDB);
+  Future<Database> _initDatabase() async {
+    String path = join(await getDatabasesPath(), 'events.db');
+    return await openDatabase(
+      path,
+      version: 1,
+      onCreate: _onCreate,
+    );
   }
 
-  Future<void> _createDB(Database db, int version) async {
+  Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
-      CREATE TABLE events (
+      CREATE TABLE events(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        date TEXT NOT NULL,
-        title TEXT NOT NULL
+        title TEXT,
+        description TEXT,
+        date TEXT,
+        isCompleted INTEGER
       )
     ''');
   }
 
-  Future<int> insertEvent(String date, String title) async {
-    final db = await database;
-    return await db.insert('events', {'date': date, 'title': title});
+  // Insert an event
+  Future<int> insertEvent(Map<String, dynamic> event) async {
+    Database db = await database;
+    return await db.insert('events', event);
   }
 
-  Future<List<Map<String, dynamic>>> getEventsByDate(String date) async {
-    final db = await database;
-    return await db.query('events', where: 'date = ?', whereArgs: [date]);
+  // Get all events
+  Future<List<Map<String, dynamic>>> getEvents() async {
+    Database db = await database;
+    return await db.query('events');
   }
 
-  Future<int> updateEvent(int id, String newTitle) async {
-    final db = await database;
-    return await db.update('events', {'title': newTitle}, where: 'id = ?', whereArgs: [id]);
+  // Update an event
+  Future<int> updateEvent(Map<String, dynamic> event) async {
+    try {
+      Database db = await database;
+      debugPrint('Updating event in database: $event');
+      return await db.update(
+        'events',
+        event,
+        where: 'id = ?',
+        whereArgs: [event['id']],
+      );
+    } catch (e) {
+      debugPrint('Error in updateEvent: $e');
+      rethrow; // Rethrow the error to propagate it
+    }
   }
 
+  // Delete an event
   Future<int> deleteEvent(int id) async {
-    final db = await database;
-    return await db.delete('events', where: 'id = ?', whereArgs: [id]);
+    Database db = await database;
+    return await db.delete(
+      'events',
+      where: 'id = ?',
+      whereArgs: [id],
+    );
   }
 }

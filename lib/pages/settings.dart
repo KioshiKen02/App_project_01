@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:project_01/pages/profile.dart';
 import 'package:provider/provider.dart';
-import '../database/database_helper.dart';
-import '../screens/forget_password_screen.dart';
-import '../theme/themeprovider.dart';
+import 'package:project_01/database/database_helper.dart';
+import 'package:project_01/screens/forget_password_screen.dart';
+import 'package:project_01/theme/themeprovider.dart';
 import 'help.dart';
 
 class SettingsPages extends StatefulWidget {
@@ -176,6 +176,7 @@ class _SettingsPagesState extends State<SettingsPages> {
 
             if (confirmed == true) {
               // Perform logout actions (e.g., clear user session)
+              if (!context.mounted) return;
               Navigator.pushNamedAndRemoveUntil(
                 context,
                 '/welcome',
